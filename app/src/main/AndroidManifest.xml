@@ -37,7 +37,9 @@
 
         <activity
             android:name=".LandslideViewerActivity"
-            android:label="@string/title_activity_landslide_viewer"></activity>
+            android:label="@string/title_activity_landslide_viewer" />
+
+        <activity android:name=".StatisticsVisualizerActivity"></activity>
     </application>
 
 </manifest>
