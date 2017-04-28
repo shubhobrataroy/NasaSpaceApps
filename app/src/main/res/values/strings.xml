@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Nasa Space Apps</string>
+    <string name="title_activity_landslide_viewer">Map</string>
+</resources>
