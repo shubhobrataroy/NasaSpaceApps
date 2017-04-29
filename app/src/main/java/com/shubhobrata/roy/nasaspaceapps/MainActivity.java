@@ -17,6 +17,7 @@ public class MainActivity extends AppCompatActivity {
         view_landslide_on_map= (Button) findViewById(R.id.view_data_on_map);
         view_langslide_statistics=(Button) findViewById(R.id.view_landslide_statistics);
         view_news_feeds=(Button) findViewById(R.id.view_news_feed);
+        solve_for_my_town= (Button)findViewById(R.id.solve_for_mytown);
 
         //Listeners
         view_landslide_on_map.setOnClickListener(new View.OnClickListener() {
@@ -41,6 +42,13 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+        solve_for_my_town.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent intent= new Intent(MainActivity.this,SolveForMyTown.class);
+                startActivity(intent);
+            }
+        });
     }
 
 
@@ -48,4 +56,5 @@ public class MainActivity extends AppCompatActivity {
     Button view_landslide_on_map ;
     Button view_langslide_statistics;
     Button view_news_feeds;
+    Button solve_for_my_town;
 }
