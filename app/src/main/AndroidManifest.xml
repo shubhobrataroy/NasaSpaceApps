@@ -44,7 +44,8 @@
         <activity android:name=".NewsFeed" />
         <activity
             android:name=".SolveForMyTown"
-            android:label="@string/title_activity_solve_for_my_town"></activity>
+            android:label="@string/title_activity_solve_for_my_town" />
+        <activity android:name=".NewsViewer"></activity>
     </application>
 
 </manifest>
