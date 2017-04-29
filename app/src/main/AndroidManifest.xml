@@ -41,7 +41,10 @@
         <activity
             android:name=".StatisticsVisualizerActivity"
             android:screenOrientation="landscape" />
-        <activity android:name=".NewsFeed"></activity>
+        <activity android:name=".NewsFeed" />
+        <activity
+            android:name=".SolveForMyTown"
+            android:label="@string/title_activity_solve_for_my_town"></activity>
     </application>
 
 </manifest>
