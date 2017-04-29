@@ -29,12 +29,12 @@ public class DBHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public void Insert(Long lat , Long lon)
+    public void Insert(double lat , double lon)
     {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues contentValues = new ContentValues();
-        contentValues.put("lat", lat);
-        contentValues.put("long", lon);
+        contentValues.put("lat", lat+"");
+        contentValues.put("long", lon+"");
         db.insert("coordinates", null, contentValues);
     }
 
@@ -43,7 +43,7 @@ public class DBHelper extends SQLiteOpenHelper {
         Cursor res =  db.rawQuery( "select * from coordinates",null );
         return res;
     }
-    public void deleteEntry(Long lat , Long lon)
+    public void deleteEntry(double lat , double lon)
     {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete("coordinates","lat ="+lat+" AND long="+lon,null);

@@ -1,5 +1,6 @@
 package com.shubhobrata.roy.nasaspaceapps;
 
+import android.database.Cursor;
 import android.os.AsyncTask;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -10,6 +11,8 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -29,6 +32,7 @@ public class LandslideViewerActivity extends FragmentActivity implements OnMapRe
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        database=new DBHelper(LandslideViewerActivity.this,"placeCordinate");
     }
 
 
@@ -41,6 +45,22 @@ public class LandslideViewerActivity extends FragmentActivity implements OnMapRe
         // Add a marker in Sydney and move the camera
         LatLng dhaka = new LatLng(23.777176, 90.399452);
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(dhaka,6.80f));
+
+        Cursor data= database.getAllData();
+        data.moveToFirst();
+        double la;
+        double lo;
+        BitmapDescriptor icon = BitmapDescriptorFactory.fromResource(R.drawable.person_drawable);
+        while(data.isAfterLast()==false){
+            la=Double.parseDouble(data.getString(data.getColumnIndex("lat")));
+            lo=Double.parseDouble(data.getString(data.getColumnIndex("long")));
+            mMap.addMarker(new MarkerOptions().position(new LatLng(la,lo))
+                    .title("Submitted by user")
+                    .icon(icon)
+
+            );
+            data.moveToNext();
+        }
 
         new PointLandSlides().execute();
     }
@@ -104,4 +124,6 @@ public class LandslideViewerActivity extends FragmentActivity implements OnMapRe
 
         }
     }
+
+    DBHelper database;
 }
