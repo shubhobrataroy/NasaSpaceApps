@@ -1,11 +1,13 @@
 package com.shubhobrata.roy.nasaspaceapps;
 
 import android.graphics.Bitmap;
-import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.View;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -15,22 +17,29 @@ import com.android.volley.toolbox.ImageRequest;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class StatisticsVisualizerActivity extends AppCompatActivity
-{
-    private enum WorkingState   {
-        BUSY, FREE
+public class StatisticsVisualizerActivity extends AppCompatActivity {
+    private RequestQueue requestQueue;
+    private RecyclerView recyclerView;
+    private JSONObject imageNamesAndLocations;
+    private List<NamedImage> namedImages;
+    private int successfulImageCount;
+    private int failedImageCount;
+    private Toast userNotification;
+
+    public synchronized void setRequestQueue(RequestQueue requestQueue)  {
+        this.requestQueue = requestQueue;
     }
 
-    private RecyclerView recyclerView;
-    private List<NamedImage> namedImages;
-    private JSONObject imageNamesAndLocations;
-    private WorkingState workingState;
+    public synchronized void setRecyclerView(RecyclerView recyclerView)  {
+        this.recyclerView = recyclerView;
+    }
 
     public synchronized void setImageNamesAndLocations(JSONObject imageNamesAndLocations)    {
         this.imageNamesAndLocations = imageNamesAndLocations;
@@ -40,12 +49,26 @@ public class StatisticsVisualizerActivity extends AppCompatActivity
         this.namedImages = namedImages;
     }
 
-    public synchronized void setWorkingState(WorkingState workingState) {
-        this.workingState = workingState;
+    public synchronized void setSuccessfulImageCount(int successfulImageCount)  {
+        if(successfulImageCount >= 0) {
+            this.successfulImageCount = successfulImageCount;
+        }
+        else throw new IllegalArgumentException("Expected number of images cannot be negative.");
     }
 
-    public synchronized List<NamedImage> getNamedImages()    {
-        return namedImages;
+    public synchronized void setFailedImageCount(int failedImageCount)  {
+        if(failedImageCount >= 0)   {
+            this.failedImageCount = failedImageCount;
+        }
+        else throw new IllegalArgumentException("Expected number of images cannot be negative.");
+    }
+
+    public synchronized void setUserNotification(Toast userNotification)    {
+        this.userNotification = userNotification;
+    }
+
+    public synchronized RequestQueue getRequestQueue()  {
+        return requestQueue;
     }
 
     public RecyclerView getRecyclerView()   {
@@ -56,8 +79,20 @@ public class StatisticsVisualizerActivity extends AppCompatActivity
         return imageNamesAndLocations;
     }
 
-    public synchronized WorkingState getWorkingState()  {
-        return workingState;
+    public synchronized List<NamedImage> getNamedImages()    {
+        return namedImages;
+    }
+
+    public synchronized int getSuccessfulImageCount() {
+        return successfulImageCount;
+    }
+
+    public synchronized int getFailedImageCount()   {
+        return failedImageCount;
+    }
+
+    public synchronized Toast getUserNotification() {
+        return userNotification;
     }
 
     public synchronized void addNamedImage(NamedImage namedImage)    {
@@ -68,116 +103,97 @@ public class StatisticsVisualizerActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState)  {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.statistical_view);
-        imageNamesAndLocations = new JSONObject();
-        workingState = WorkingState.FREE;
-        namedImages = new ArrayList<>();
-        retrieveImageNamesAndLocations("http://abdalimran.pythonanywhere.com/visualizations");
-        recyclerView = (RecyclerView)findViewById(R.id.recycler_view);
+        setRecyclerView((RecyclerView)findViewById(R.id.recycler_view));
         recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
-        recyclerView.setAdapter(new NamedImageAdapter(namedImages));
-        // requestImageAsync("http://media.mnn.com/assets/images/2015/08/forest-waterfall-thailand.jpg.838x0_q80.jpg");
-        // requestImageAsync("https://github.com/abdalimran/Bangladesh-Landslide-Data-Analysis/raw/master/03_city_vs_nlandslides.jpg");
-        /*
-        requestAsync("http://abdalimran.pythonanywhere.com/visualizations");
-        requestImageAsync("http://media.mnn.com/assets/images/2015/08/forest-waterfall-thailand.jpg.838x0_q80.jpg");
-        */
+        setNamedImages(new ArrayList<NamedImage>());
+        recyclerView.setAdapter(new NamedImageAdapter(this, getNamedImages()));
+        setRequestQueue(Volley.newRequestQueue(this));
+        setImageNamesAndLocations(new JSONObject());
+        setSuccessfulImageCount(0);
+        setFailedImageCount(0);
+        setUserNotification(Toast.makeText(getApplicationContext(), "", Toast.LENGTH_LONG));
+        requestQueue.add(new JsonObjectRequest(
+                Request.Method.GET,
+                getString(R.string.url_imageNamesAndLocations),
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        setImageNamesAndLocations(response);
+                        notifyUser("Loading images.\nPlease wait for some time.");
+                        downloadAndViewImages();
+                    }
+                },
+                new Response.ErrorListener()    {
+                    @Override
+                    public void onErrorResponse(VolleyError error)  {
+                        String message = "Sorry. Couldn't retrieve image info.\n";
+                        message += "Please check the internet connection.";
+                        notifyUser(message);
+                    }
+                }
+        ));
     }
 
-    private void retrieveImageNamesAndLocations(String url)    {
-        setWorkingState(WorkingState.BUSY);
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(
-                        Request.Method.GET, url,
-                        new Response.Listener<JSONObject>() {
-                            @Override
-                            public void onResponse(JSONObject jsonObject)   {
-                                setImageNamesAndLocations(jsonObject);
-                                setWorkingState(WorkingState.FREE);
-                                retrieveNamedImages(imageNamesAndLocations);
-                            }
-                        },
-                        new Response.ErrorListener()    {
-                            @Override
-                            public void onErrorResponse(VolleyError error)    {
-                                setImageNamesAndLocations(new JSONObject());
-                            }
-                        }
-                );
-        Volley.newRequestQueue(this).add(jsonObjectRequest);
-    }
-
-    private void retrieveNamedImages(JSONObject jsonObject) {
-        Iterator<String> keyIterator = jsonObject.keys();
-        RequestQueue requestQueue = Volley.newRequestQueue(this);
-        requestQueue.addRequestFinishedListener(new RequestQueue.RequestFinishedListener<Object>() {
-            @Override
-            public void onRequestFinished(Request<Object> request) {
-                getRecyclerView().getAdapter().notifyDataSetChanged();
-            }
-        });
+    private void downloadAndViewImages()    {
+        Iterator<String> keyIterator = imageNamesAndLocations.keys();
+        final List<String> imageNames = new ArrayList<>();
         while(keyIterator.hasNext())    {
-            final String key = keyIterator.next();
+            imageNames.add(keyIterator.next());
+        }
+        for(int i = 0; i < imageNames.size(); i++)  {
+            final String imageName = imageNames.get(i);
+            String imageURL = "";
             try {
-                requestQueue.add(new ImageRequest(
-                        jsonObject.getString(key),
-                        new Response.Listener<Bitmap>() {
-                            @Override
-                            public void onResponse(Bitmap image)    {
-                                getNamedImages().add(new NamedImage(key, image));
+                imageURL = imageNamesAndLocations.getString(imageName);
+            }   catch(JSONException ex) {
+                if((++failedImageCount) + successfulImageCount == imageNames.size())  {
+                    notifyUserOnImageProcessingFinished();
+                }
+                continue;
+            }
+            requestQueue.add(new ImageRequest(
+                    imageURL,
+                    new Response.Listener<Bitmap>() {
+                        @Override
+                        public void onResponse(Bitmap image)    {
+                            addNamedImage(new NamedImage(imageName, image));
+                            recyclerView.getAdapter().notifyDataSetChanged();
+                            if((++successfulImageCount) + failedImageCount == imageNames.size())   {
+                                notifyUserOnImageProcessingFinished();
                             }
-                        }, 0, 0, null, null,
-                        new Response.ErrorListener()    {
-                            @Override
-                            public void onErrorResponse(VolleyError error) { }
                         }
-                ));
-            }   catch(Exception exception) { }
+                    },
+                    0, 0, null, null,
+                    new Response.ErrorListener()    {
+                        @Override
+                        public void onErrorResponse(VolleyError error)  {
+                            if(successfulImageCount + (++failedImageCount) == imageNames.size())  {
+                                notifyUserOnImageProcessingFinished();
+                            }
+                        }
+                    }
+            ));
         }
     }
 
-    /*
-    private void requestImageAsync(String imageAddress)   {
-        final ImageView imageView = (ImageView)findViewById(R.id.downloadedImage);
-        ImageRequest imageRequest = new ImageRequest(
-                imageAddress,
-                new Response.Listener<Bitmap>() {
-                    @Override
-                    public void onResponse(Bitmap response) {
-                        imageView.setImageBitmap(response);
-                    }
-                }, 0, 0, null, null);
-        Volley.newRequestQueue(this).add(imageRequest);
+    private void notifyUserOnImageProcessingFinished()  {
+        String message = "";
+        if(successfulImageCount == 0)   {
+            message += "Sorry. We couldn't retrieve any images from server.";
+        }
+        else    {
+            message += "Your images are ready";
+            if(failedImageCount > 0)   {
+                message += " (" + failedImageCount + " failed)";
+            }
+            message += ".";
+        }
+        notifyUser(message);
     }
-    */
-
-    /*
-    private void requestAsync(String url)    {
-        final TextView responseView = (TextView)findViewById(R.id.responseView);
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.GET, url,
-                                                        new Response.Listener<JSONObject>() {
-                                                            @Override
-                                                            public void onResponse(JSONObject jsonObject)    {
-                                                                responseView.setText(jsonObject.toString());
-                                                                Iterator<String> keys = jsonObject.keys();
-                                                                responseView.setText("");
-                                                                while(keys.hasNext())   {
-                                                                    try {
-                                                                        String key = keys.next();
-                                                                        responseView.append("Key: " + key + "\nValue: " + jsonObject.getString(key) + "\n\n");
-                                                                    }   catch(Exception ex) {
-
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                        new Response.ErrorListener()    {
-                                                            @Override
-                                                            public void onErrorResponse(VolleyError error)  {
-                                                                responseView.setText(error.getMessage());
-                                                            }
-                                                        });
-        Volley.newRequestQueue(this).add(jsonObjectRequest);
-        responseView.setText("Request sent to " + url);
+    
+    public void notifyUser(String message)  {
+        userNotification.setText(message);
+        userNotification.show();
     }
-    */
 }
