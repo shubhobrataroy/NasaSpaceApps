@@ -1,5 +1,6 @@
 package com.shubhobrata.roy.nasaspaceapps;
 
+import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 
@@ -41,11 +42,12 @@ public class SolveForMyTown extends FragmentActivity implements GoogleMap.OnMapC
         // Add a marker in Sydney and move the camera
         //LatLng sydney = new LatLng(-34, 151);
         LatLng aiubCam4 = new LatLng(23.794648, 90.405813);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(aiubCam4, 10.80f));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(aiubCam4, 17.80f));
     }
 
     @Override
     public void onMapClick(LatLng latLng) {
 
     }
+
 }
