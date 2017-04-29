@@ -4,6 +4,7 @@
     android:layout_height="wrap_content"
     android:background="@android:drawable/dialog_holo_light_frame"
     android:padding="@dimen/activity_horizontal_margin"
+    android:id="@+id/holder_layout"
     >
 
     <TextView
