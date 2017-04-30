@@ -2,19 +2,19 @@ package com.shubhobrata.roy.nasaspaceapps;
 
 import android.graphics.Bitmap;
 
-public class NamedImage {
-    private String imageName;
+public class ImageMetaData {
+    private String description;
     private Bitmap image;
 
-    public NamedImage(String imageName, Bitmap image)   {
-        this.imageName = imageName;
+    public ImageMetaData(Bitmap image, String description)  {
+        this.description = description;
         this.image = image;
     }
 
     // Setters
 
-    public void setImageName(String imageName)  {
-        this.imageName = imageName;
+    public void setDescription(String description)  {
+        this.description = description;
     }
 
     public void setImage(Bitmap image)  {
@@ -23,8 +23,8 @@ public class NamedImage {
 
     // Getters
 
-    public String getImageName()    {
-        return imageName;
+    public String getDescription()    {
+        return description;
     }
 
     public Bitmap getImage()    {

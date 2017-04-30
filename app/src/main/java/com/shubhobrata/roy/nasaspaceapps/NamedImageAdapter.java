@@ -1,6 +1,5 @@
 package com.shubhobrata.roy.nasaspaceapps;
 
-import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
@@ -9,16 +8,15 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.List;
 
 public class NamedImageAdapter extends RecyclerView.Adapter<NamedImageAdapter.NamedImageViewHolder>   {
     private AppCompatActivity activity;
-    private List<NamedImage> namedImages;
+    private List<ImageMetaData> imageMetaDataCollection;
 
-    public NamedImageAdapter(AppCompatActivity activity, List<NamedImage> namedImages)  {
-        this.namedImages = namedImages;
+    public NamedImageAdapter(AppCompatActivity activity, List<ImageMetaData> imageMetaDataCollection)  {
+        this.imageMetaDataCollection = imageMetaDataCollection;
         this.activity = activity;
     }
 
@@ -26,16 +24,16 @@ public class NamedImageAdapter extends RecyclerView.Adapter<NamedImageAdapter.Na
         this.activity = activity;
     }
 
-    public void setNamedImages(List<NamedImage> namedImages)    {
-        this.namedImages = namedImages;
+    public void setImageMetaDataCollection(List<ImageMetaData> imageMetaDataCollection)    {
+        this.imageMetaDataCollection = imageMetaDataCollection;
     }
 
     public AppCompatActivity getActivity()  {
         return activity;
     }
 
-    public List<NamedImage> getNamedImages()    {
-        return namedImages;
+    public List<ImageMetaData> getImageMetaDataCollection()    {
+        return imageMetaDataCollection;
     }
 
     @Override
@@ -46,21 +44,21 @@ public class NamedImageAdapter extends RecyclerView.Adapter<NamedImageAdapter.Na
 
     @Override
     public int getItemCount() {
-        return namedImages.size();
+        return imageMetaDataCollection.size();
     }
 
     @Override
     public void onBindViewHolder(final NamedImageViewHolder holder, int position)   {
-        NamedImage namedImage = namedImages.get(position);
-        holder.getImageNameView().setText(namedImage.getImageName());
-        holder.getImageView().setImageBitmap(namedImage.getImage());
+        final ImageMetaData imageMetaData = imageMetaDataCollection.get(position);
+        holder.getImageNameView().setText(imageMetaData.getDescription());
+        holder.getImageView().setImageBitmap(imageMetaData.getImage());
         final View view = holder.getView();
         view.setId(position);
         view.setOnClickListener(new View.OnClickListener()  {
             @Override
             public void onClick(final View view) {
                 new AlertDialog.Builder(getActivity())
-                        .setMessage("" + view.getId())
+                        .setMessage(imageMetaData.getDescription() + view.getId())
                         .setPositiveButton("OK", null).show();
             }
         });

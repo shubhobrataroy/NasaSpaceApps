@@ -1,12 +1,12 @@
 package com.shubhobrata.roy.nasaspaceapps;
 
 import android.graphics.Bitmap;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.view.View;
 import android.widget.Toast;
 
 import com.android.volley.Request;
@@ -14,9 +14,11 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.ImageRequest;
-import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.JsonArrayRequest;
+import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -27,8 +29,8 @@ import java.util.List;
 public class StatisticsVisualizerActivity extends AppCompatActivity {
     private RequestQueue requestQueue;
     private RecyclerView recyclerView;
-    private JSONObject imageNamesAndLocations;
-    private List<NamedImage> namedImages;
+    private JSONArray imageInfo;
+    private List<ImageMetaData> namedImages;
     private int successfulImageCount;
     private int failedImageCount;
     private Toast userNotification;
@@ -41,11 +43,11 @@ public class StatisticsVisualizerActivity extends AppCompatActivity {
         this.recyclerView = recyclerView;
     }
 
-    public synchronized void setImageNamesAndLocations(JSONObject imageNamesAndLocations)    {
-        this.imageNamesAndLocations = imageNamesAndLocations;
+    public synchronized void setImageInfo(JSONArray imageInfo)    {
+        this.imageInfo = imageInfo;
     }
 
-    public synchronized void setNamedImages(List<NamedImage> namedImages)    {
+    public synchronized void setNamedImages(List<ImageMetaData> namedImages)    {
         this.namedImages = namedImages;
     }
 
@@ -75,11 +77,11 @@ public class StatisticsVisualizerActivity extends AppCompatActivity {
         return recyclerView;
     }
 
-    public synchronized JSONObject getImageNamesAndLocations()   {
-        return imageNamesAndLocations;
+    public synchronized JSONArray getInfo()   {
+        return imageInfo;
     }
 
-    public synchronized List<NamedImage> getNamedImages()    {
+    public synchronized List<ImageMetaData> getNamedImages()    {
         return namedImages;
     }
 
@@ -95,7 +97,7 @@ public class StatisticsVisualizerActivity extends AppCompatActivity {
         return userNotification;
     }
 
-    public synchronized void addNamedImage(NamedImage namedImage)    {
+    public synchronized void addNamedImage(ImageMetaData namedImage)    {
         namedImages.add(namedImage);
     }
 
@@ -106,20 +108,21 @@ public class StatisticsVisualizerActivity extends AppCompatActivity {
         setRecyclerView((RecyclerView)findViewById(R.id.recycler_view));
         recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
-        setNamedImages(new ArrayList<NamedImage>());
+        setNamedImages(new ArrayList<ImageMetaData>());
         recyclerView.setAdapter(new NamedImageAdapter(this, getNamedImages()));
         setRequestQueue(Volley.newRequestQueue(this));
-        setImageNamesAndLocations(new JSONObject());
+        setImageInfo(new JSONArray());
         setSuccessfulImageCount(0);
         setFailedImageCount(0);
         setUserNotification(Toast.makeText(getApplicationContext(), "", Toast.LENGTH_LONG));
-        requestQueue.add(new JsonObjectRequest(
+        requestQueue.add(new JsonArrayRequest(
                 Request.Method.GET,
                 getString(R.string.url_imageNamesAndLocations),
-                new Response.Listener<JSONObject>() {
+                new Response.Listener<JSONArray>()   {
                     @Override
-                    public void onResponse(JSONObject response) {
-                        setImageNamesAndLocations(response);
+                    public void onResponse(JSONArray response)  {
+                        setImageInfo(response);
+                        notifyUser(response.toString());
                         notifyUser("Loading images.\nPlease wait for some time.");
                         downloadAndViewImages();
                     }
@@ -127,53 +130,50 @@ public class StatisticsVisualizerActivity extends AppCompatActivity {
                 new Response.ErrorListener()    {
                     @Override
                     public void onErrorResponse(VolleyError error)  {
-                        String message = "Sorry. Couldn't retrieve image info.\n";
-                        message += "Please check the internet connection.";
-                        notifyUser(message);
+                        /// String message = "Sorry. Couldn't retrieve image info.\n";
+                        // message += "Please check the internet connection.";
+                        // notifyUser(message);
+                        notifyUser("Error Message: " + error.toString());
                     }
                 }
         ));
     }
 
     private void downloadAndViewImages()    {
-        Iterator<String> keyIterator = imageNamesAndLocations.keys();
-        final List<String> imageNames = new ArrayList<>();
-        while(keyIterator.hasNext())    {
-            imageNames.add(keyIterator.next());
-        }
-        for(int i = 0; i < imageNames.size(); i++)  {
-            final String imageName = imageNames.get(i);
-            String imageURL = "";
+        for(int i = 0; i < imageInfo.length(); i++) {
             try {
-                imageURL = imageNamesAndLocations.getString(imageName);
-            }   catch(JSONException ex) {
-                if((++failedImageCount) + successfulImageCount == imageNames.size())  {
+                JSONObject json = ((JSONObject) imageInfo.get(i));
+                Iterator<String> keyIterator = json.keys();
+                String imageURL = json.getString(keyIterator.next());
+                final String imageDescription = json.getString(keyIterator.next());
+                requestQueue.add(new ImageRequest(
+                        imageURL,
+                        new Response.Listener<Bitmap>() {
+                            @Override
+                            public void onResponse(Bitmap image) {
+                                addNamedImage(new ImageMetaData(image, imageDescription));
+                                recyclerView.getAdapter().notifyDataSetChanged();
+                                if((++successfulImageCount) + failedImageCount == imageInfo.length())   {
+                                    notifyUserOnImageProcessingFinished();
+                                }
+                            }
+                        },
+                        0, 0, null, null,
+                        new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
+                                if(successfulImageCount + (++failedImageCount) == imageInfo.length())   {
+                                    notifyUserOnImageProcessingFinished();
+                                }
+                            }
+                        }
+                ));
+            }
+            catch(JSONException ex) {
+                if((++failedImageCount) + successfulImageCount == imageInfo.length())   {
                     notifyUserOnImageProcessingFinished();
                 }
-                continue;
             }
-            requestQueue.add(new ImageRequest(
-                    imageURL,
-                    new Response.Listener<Bitmap>() {
-                        @Override
-                        public void onResponse(Bitmap image)    {
-                            addNamedImage(new NamedImage(imageName, image));
-                            recyclerView.getAdapter().notifyDataSetChanged();
-                            if((++successfulImageCount) + failedImageCount == imageNames.size())   {
-                                notifyUserOnImageProcessingFinished();
-                            }
-                        }
-                    },
-                    0, 0, null, null,
-                    new Response.ErrorListener()    {
-                        @Override
-                        public void onErrorResponse(VolleyError error)  {
-                            if(successfulImageCount + (++failedImageCount) == imageNames.size())  {
-                                notifyUserOnImageProcessingFinished();
-                            }
-                        }
-                    }
-            ));
         }
     }
 
